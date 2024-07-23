@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>codecam</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        textarea { width: 100%; height: 400px; }
+    </style>
+</head>
+
+<body>
+    <h1>codecam</h1>
+    <input type="text" id="path" placeholder="Enter path or leave empty for current directory">
+    <button onclick="browse()">browse</button>
+    <div id="files"></div>
+    <button onclick="generate()">generate</button>
+    <textarea id="result"></textarea>
+
+    <script>
+        function browse() {
+            const path = document.getElementById('path').value;
+            fetch('/browse', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json'},
+                body: JSON.stringify({ path })
+            }).then(response => response.json())
+              .then(data => {
+                const filesDiv = document.getElementById('files')
+                filesDiv.innerHTML = ''
+
+                // console.log("files: ", files);
+
+                if (data.files && Array.isArray(data.files)) {
+                    data.files.forEach(file => {
+                        const checkbox = document.createElement('input');
+                        checkbox.type = 'checkbox';
+                        checkbox.value = file;
+                        filesDiv.appendChild(checkbox);
+                        filesDiv.appendChild(document.createTextNode(file));
+                        filesDiv.appendChild(document.createElement('br'));
+                    });
+                } else {
+                    filesDiv.innerHTML = 'No files found or invalid path.'
+                }
+
+            });
+        }
+
+        function generate() {
+            const checkboxes = document.querySelectorAll('#files input:checked');
+            const files = Array.from(checkboxes).map(checkbox => checkbox.value);
+            fetch('/generate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json'},
+                body: JSON.stringify({ files })
+            }).then(response => response.json())
+              .then(data => {
+                document.getElementById('result').value = data.result;
+              });
+        }
+    </script>
+</body>
+
+</html>
