@@ -6,14 +6,20 @@
     <title>codecam</title>
     <style>
         body { font-family: Arial, sans-serif; margin: 20px; }
-        textarea { width: 100%; height: 400px; }
+        textarea { width: 100%; height: 400px; margin-top: 20px; }
+        .button-group { margin-bottom: 10px; }
+        .file-list { margin-bottom: 20px; }
     </style>
 </head>
 
 <body>
-    <h1>codecam</h1>
-    <input type="text" id="path" placeholder="Enter path or leave empty for current directory">
-    <button onclick="browse()">browse</button>
+    <div class="button-group">
+        <input type="text" id="path" placeholder="Enter path or leave empty for current directory">
+        <button onclick="browse()">list files</button>
+        <button onclick="checkAll()">check all</button>
+        <button onclick="uncheckAll()">uncheck all</button>
+    </div>
+
     <div id="files"></div>
     <button onclick="generate()">generate</button>
     <textarea id="result"></textarea>
@@ -46,6 +52,16 @@
                 }
 
             });
+        }
+
+        function checkAll() {
+            const checkboxes = document.querySelectorAll('#files input[type="checkbox"]');
+            checkboxes.forEach(checkbox => checkbox.checked = true);
+        }
+
+        function uncheckAll() {
+            const checkboxes = document.querySelectorAll('#files input[type="checkbox"]');
+            checkboxes.forEach(checkbox => checkbox.checked = false);            
         }
 
         function generate() {
