@@ -1,17 +1,29 @@
 from flask import Flask, render_template, request, jsonify
 import os
 import sys
+import json
+import shutil
 import platform
+import subprocess
 import webbrowser
 
 app = Flask(__name__)
 
 default_path = "."
+selected_files_path = "selected_files.json"
 
 
 @app.route("/")
 def index():
-    return render_template("index.html", default_path=default_path)
+    # Load previously selected files
+    if os.path.exists(selected_files_path):
+        with open(selected_files_path, "r") as f:
+            selected_files = json.load(f)
+    else:
+        selected_files = []
+    return render_template(
+        "index.html", default_path=default_path, selected_files=selected_files
+    )
 
 
 @app.route("/browse", methods=["POST"])
@@ -34,22 +46,59 @@ def browse():
 @app.route("/generate", methods=["POST"])
 def generate():
     files = request.json.get("files", [])
+    result = generate_snapshot(files)
+
+    # Save the selected files
+    with open(selected_files_path, "w") as f:
+        json.dump(files, f)
+
+    return jsonify(result=result)
+
+
+def generate_snapshot(files=None):
+    if files is None:
+        if os.path.exists(selected_files_path):
+            with open(selected_files_path, "r") as f:
+                files = json.load(f)
+        else:
+            return None
+
     result = ""
     for file in files:
         with open(file, "r") as f:
             content = f.read()
         result += f"--- {file} ---\n{content}\n\n"
-    return jsonify(result=result)
+
+    return result
+
+
+def copy_to_clipboard(text):
+    if platform.system() == "Darwin":
+        subprocess.run("pbcopy", text=True, input=text)
+    elif platform.system() == "Linux":
+        if shutil.which("xclip") is not None:
+            subprocess.run(["xclip", "-selection", "clipboard"], text=True, input=text)
+        else:
+            print(
+                "xclip is not installed. Please install xclip to use this feature on Linux, e.g. via `sudo apt install xclip`."
+            )
+    elif platform.system() == "Windows":
+        subprocess.run("clip", text=True, input=text)
 
 
 if __name__ == "__main__":
-    if len(sys.argv) > 1:
-        default_path = sys.argv[1]
-
-    if platform.system() == "Linux" and "Microsoft" in platform.uname().release:
-        # WSL-specific command to open the browser
-        os.system("powershell.exe Start-Process http://127.0.0.1:5000")
+    if len(sys.argv) > 1 and sys.argv[1] == "gen":
+        snapshot = generate_snapshot()
+        if snapshot:
+            copy_to_clipboard(snapshot)
+        else:
+            print("No selected files found.")
     else:
-        webbrowser.open("http://127.0.0.1:5000")
 
-    app.run()
+        if platform.system() == "Linux" and "Microsoft" in platform.uname().release:
+            # WSL-specific command to open the browser
+            os.system("powershell.exe Start-Process http://127.0.0.1:5000")
+        else:
+            webbrowser.open("http://127.0.0.1:5000")
+
+        app.run()
