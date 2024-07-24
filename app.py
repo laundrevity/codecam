@@ -94,6 +94,8 @@ def generate_snapshot(files=None):
     )
     result = f"{system_info}\nTime: {datetime.now()}\n"
     for file in files:
+        if os.path.isdir(file):
+            continue
         with open(file, "r") as f:
             content = f.read()
         result += f"--- {file} ---\n{content}\n\n"

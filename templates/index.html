@@ -26,43 +26,98 @@
         <button onclick="cloneRepo()">Clone Repo</button>
     </div>
 
-    <div id="files"></div>
+    <div id="files" class="file-list"></div>
     <button onclick="generate()">generate</button>
     <textarea id="result"></textarea>
 
     <script>
         let selectedFiles = {{ selected_files | tojson | safe }};
+
         function browse() {
             const path = document.getElementById('path').value;
             fetch('/browse', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json'},
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ path })
             }).then(response => response.json())
               .then(data => {
-                const filesDiv = document.getElementById('files')
-                filesDiv.innerHTML = ''
-
-                // console.log("files: ", files);
+                const filesDiv = document.getElementById('files');
+                filesDiv.innerHTML = '';
 
                 if (data.files && Array.isArray(data.files)) {
-                    data.files.forEach(file => {
-                        const checkbox = document.createElement('input');
-                        checkbox.type = 'checkbox';
-                        checkbox.value = file;
-                        if (selectedFiles.includes(file)) {
-                            checkbox.checked = true;
-                        }
-                        filesDiv.appendChild(checkbox);
-                        filesDiv.appendChild(document.createTextNode(file));
-                        filesDiv.appendChild(document.createElement('br'));
-                    });
+                    const fileTree = buildFileTree(data.files);
+                    filesDiv.appendChild(fileTree);
                 } else {
-                    filesDiv.innerHTML = 'No files found or invalid path.'
+                    filesDiv.innerHTML = 'No files found or invalid path.';
                 }
-
             });
         }
+
+        function buildFileTree(files) {
+            const fileTree = document.createElement('div');
+            const fileMap = {};
+
+            files.forEach(file => {
+                const parts = file.split('/');
+                let current = fileMap;
+
+                parts.forEach((part, index) => {
+                    if (!current[part]) {
+                        current[part] = {
+                            children: {},
+                            isFile: index === parts.length - 1,
+                            fullPath: file
+                        };
+                    }
+                    current = current[part].children;
+                });
+            });
+
+            function createTreeElement(fileNode, path) {
+                const element = document.createElement('div');
+                element.style.marginLeft = '20px';
+            
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.value = path;
+                checkbox.checked = selectedFiles.includes(path);
+            
+                checkbox.addEventListener('change', () => {
+                    checkAllInDirectory(path, checkbox.checked);
+                });
+            
+                const text = document.createTextNode(fileNode.isFile ? path : (path === '.' ? 'Root' : path.split('/').pop()));
+            
+                element.appendChild(checkbox);
+                element.appendChild(text);
+            
+                for (const key in fileNode.children) {
+                    element.appendChild(createTreeElement(fileNode.children[key], `${path}/${key}`));
+                }
+            
+                return element;
+            }
+            
+
+            for (const key in fileMap) {
+                fileTree.appendChild(createTreeElement(fileMap[key], key));
+            }
+
+            return fileTree;
+        }
+
+        function checkAllInDirectory(directory, check) {
+            const checkboxes = document.querySelectorAll('#files input[type="checkbox"]');
+            checkboxes.forEach(checkbox => {
+                const relativePath = checkbox.value.replace(/^\.\//, ''); // Remove leading "./"
+                const directoryPath = directory.replace(/^\.\//, ''); // Remove leading "./" from directory
+                if (directoryPath === '.' || relativePath.startsWith(directoryPath + '/')) {
+                    checkbox.checked = check;
+                }
+            });
+        }
+        
+        
 
         function checkAll() {
             const checkboxes = document.querySelectorAll('#files input[type="checkbox"]');
@@ -71,7 +126,7 @@
 
         function uncheckAll() {
             const checkboxes = document.querySelectorAll('#files input[type="checkbox"]');
-            checkboxes.forEach(checkbox => checkbox.checked = false);            
+            checkboxes.forEach(checkbox => checkbox.checked = false);
         }
 
         function generate() {
@@ -79,7 +134,7 @@
             const files = Array.from(checkboxes).map(checkbox => checkbox.value);
             fetch('/generate', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json'},
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ files })
             }).then(response => response.json())
               .then(data => {
@@ -90,7 +145,6 @@
         function cloneRepo() {
             const repo_url = document.getElementById('repo_url').value;
             const clone_dir = document.getElementById('clone_dir').value;
-            
             fetch('/clone', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -99,15 +153,12 @@
               .then(data => {
                 alert(data.stdout);
                 if (!data.stderr) {
-                    console.log("Calling browse agaion to refresh file list after clone...");
                     browse(); // Refresh file list after cloning
-                } else {
-                    console.log("Not calling browse because we do have something for data.stderr: ", data.stderr);
                 }
-              })
+            });
         }
 
-        window.onload = function() {
+        window.onload = function () {
             browse();
         }
     </script>
