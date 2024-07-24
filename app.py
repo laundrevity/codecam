@@ -60,6 +60,10 @@ def generate():
 def clone_repo():
     repo_url = request.json.get("repo_url")
     clone_dir = request.json.get("clone_dir", "cloned_repo")
+    if os.path.exists(clone_dir):
+        return jsonify(
+            {"stdout": "Repo already exists.", "stderr": "Repo already exists."}
+        )
     result = subprocess.run(
         ["git", "clone", repo_url, clone_dir], capture_output=True, text=True
     )
