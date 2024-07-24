@@ -1,1 +1,1 @@
-["./requirements.txt", "./app.py", "./README.md", "./cam", "./codecam.fish", "./codecam.sh", "./templates/index.html"]
+["./requirements.txt", "./app.py", "./README.md", "./selected_files.json", "./cam", "./codecam.fish", "./codecam.sh", "./templates/index.html"]

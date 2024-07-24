@@ -1,4 +1,5 @@
 from flask import Flask, render_template, request, jsonify
+from datetime import datetime
 import os
 import sys
 import json
@@ -63,7 +64,10 @@ def generate_snapshot(files=None):
         else:
             return None
 
-    result = ""
+    system_info = (
+        f"System: {platform.system()} {platform.release()} {platform.version()}"
+    )
+    result = f"{system_info}\nTime: {datetime.now()}\n"
     for file in files:
         with open(file, "r") as f:
             content = f.read()

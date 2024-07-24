@@ -25,6 +25,7 @@
     <textarea id="result"></textarea>
 
     <script>
+        let selectedFiles = {{ selected_files | tojson | safe }};
         function browse() {
             const path = document.getElementById('path').value;
             fetch('/browse', {
@@ -43,6 +44,9 @@
                         const checkbox = document.createElement('input');
                         checkbox.type = 'checkbox';
                         checkbox.value = file;
+                        if (selectedFiles.includes(file)) {
+                            checkbox.checked = true;
+                        }
                         filesDiv.appendChild(checkbox);
                         filesDiv.appendChild(document.createTextNode(file));
                         filesDiv.appendChild(document.createElement('br'));
@@ -75,6 +79,10 @@
               .then(data => {
                 document.getElementById('result').value = data.result;
               });
+        }
+
+        window.onload = function() {
+            browse();
         }
     </script>
 </body>
