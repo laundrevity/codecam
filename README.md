@@ -18,14 +18,6 @@ git clone https://github.com/yourusername/codecam.git
 cd codecam
 ```
 
-### Create a virtual environment 
-
-```bash
-python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-```
-
 ### Make the scripts executable
 ```bash
 chmod +x cam codecam.sh codecam.fish
