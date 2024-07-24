@@ -1,6 +1,7 @@
 from flask import Flask, render_template, request, jsonify
 import os
 import sys
+import platform
 import webbrowser
 
 app = Flask(__name__)
@@ -44,6 +45,11 @@ def generate():
 if __name__ == "__main__":
     if len(sys.argv) > 1:
         default_path = sys.argv[1]
-    webbrowser.open("http://127.0.0.1:5000")
-    # app.run(debug=True)
+
+    if platform.system() == "Linux" and "Microsoft" in platform.uname().release:
+        # WSL-specific command to open the browser
+        os.system("powershell.exe Start-Process http://127.0.0.1:5000")
+    else:
+        webbrowser.open("http://127.0.0.1:5000")
+
     app.run()
