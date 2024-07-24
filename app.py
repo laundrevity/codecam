@@ -56,6 +56,16 @@ def generate():
     return jsonify(result=result)
 
 
+@app.route("/clone", methods=["POST"])
+def clone_repo():
+    repo_url = request.json.get("repo_url")
+    clone_dir = request.json.get("clone_dir", "cloned_repo")
+    result = subprocess.run(
+        ["git", "clone", repo_url, clone_dir], capture_output=True, text=True
+    )
+    return jsonify({"stdout": result.stdout, "stderr": result.stderr})
+
+
 def generate_snapshot(files=None):
     if files is None:
         if os.path.exists(selected_files_path):

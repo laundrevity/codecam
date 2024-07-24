@@ -20,6 +20,11 @@
         <button onclick="uncheckAll()">uncheck all</button>
     </div>
 
+    <div class="button-group">
+        <input type="text" id="repo_url" placeholder="Enter GitHub repo URL">
+        <button onclick="cloneRepo()">Clone Repo</button>
+    </div>
+
     <div id="files"></div>
     <button onclick="generate()">generate</button>
     <textarea id="result"></textarea>
@@ -79,6 +84,23 @@
               .then(data => {
                 document.getElementById('result').value = data.result;
               });
+        }
+
+        function cloneRepo() {
+            const repo_url = document.getElementById('repo_url').value;
+            fetch('/clone', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ repo_url })
+            }).then(response => response.json())
+              .then(data => {
+                if (data.stderr) {
+                    console.error(data.stderr);
+                } else {
+                    console.log(data.stdout);
+                    browse(); // Refresh file list after cloning
+                }
+              })
         }
 
         window.onload = function() {
