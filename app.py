@@ -22,8 +22,12 @@ def index():
             selected_files = json.load(f)
     else:
         selected_files = []
+    current_directory = os.path.abspath(default_path)
     return render_template(
-        "index.html", default_path=default_path, selected_files=selected_files
+        "index.html",
+        default_path=default_path,
+        selected_files=selected_files,
+        current_directory=current_directory,
     )
 
 

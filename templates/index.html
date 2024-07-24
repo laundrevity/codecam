@@ -9,6 +9,38 @@
         textarea { width: 100%; height: 400px; margin-top: 20px; }
         .button-group { margin-bottom: 10px; }
         .file-list { margin-bottom: 20px; }
+        .tree { list-style-type: none; padding-left: 20px; }
+        .tree li { 
+            position: relative;
+            padding-left: 20px;
+            border-left: 1px solid #ccc;
+            margin-left: 20px;
+            list-style: none; /* Remove default list styling */
+        }
+        .tree li::before {
+            content: '';
+            position: absolute;
+            top: -10px;
+            left: 0;
+            bottom: 10px;
+            width: 1px;
+            background: #ccc;
+        }
+        .tree li:last-child::before {
+            height: 10px;
+        }
+        .tree li::after {
+            content: '';
+            position: absolute;
+            top: 20px;
+            left: -20px;
+            right: 0; /* Extend the line to the right */
+            height: 1px;
+            background: #ccc;
+        }
+        .tree li:last-child::after {
+            width: 20px; /* Do not extend the line for the last child */
+        }
     </style>
 </head>
 
@@ -31,6 +63,7 @@
     <textarea id="result"></textarea>
 
     <script>
+        const currentDirectory = "{{ current_directory }}";
         let selectedFiles = {{ selected_files | tojson | safe }};
 
         function browse() {
@@ -54,7 +87,8 @@
         }
 
         function buildFileTree(files) {
-            const fileTree = document.createElement('div');
+            const fileTree = document.createElement('ul');
+            fileTree.classList.add('tree');
             const fileMap = {};
 
             files.forEach(file => {
@@ -74,30 +108,33 @@
             });
 
             function createTreeElement(fileNode, path) {
-                const element = document.createElement('div');
-                element.style.marginLeft = '20px';
-            
+                const li = document.createElement('li');
+
                 const checkbox = document.createElement('input');
                 checkbox.type = 'checkbox';
                 checkbox.value = path;
                 checkbox.checked = selectedFiles.includes(path);
-            
+
                 checkbox.addEventListener('change', () => {
                     checkAllInDirectory(path, checkbox.checked);
                 });
-            
-                const text = document.createTextNode(fileNode.isFile ? path : (path === '.' ? 'Root' : path.split('/').pop()));
-            
-                element.appendChild(checkbox);
-                element.appendChild(text);
-            
-                for (const key in fileNode.children) {
-                    element.appendChild(createTreeElement(fileNode.children[key], `${path}/${key}`));
+
+                const text = document.createTextNode(fileNode.isFile ? path : (path === '.' ? currentDirectory : path.split('/').pop()));
+
+                li.appendChild(checkbox);
+                li.appendChild(text);
+
+                if (Object.keys(fileNode.children).length > 0) {
+                    const ul = document.createElement('ul');
+                    ul.classList.add('tree');
+                    for (const key in fileNode.children) {
+                        ul.appendChild(createTreeElement(fileNode.children[key], `${path}/${key}`));
+                    }
+                    li.appendChild(ul);
                 }
-            
-                return element;
+
+                return li;
             }
-            
 
             for (const key in fileMap) {
                 fileTree.appendChild(createTreeElement(fileMap[key], key));
@@ -116,8 +153,6 @@
                 }
             });
         }
-        
-        
 
         function checkAll() {
             const checkboxes = document.querySelectorAll('#files input[type="checkbox"]');
