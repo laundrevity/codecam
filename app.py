@@ -45,4 +45,5 @@ if __name__ == "__main__":
     if len(sys.argv) > 1:
         default_path = sys.argv[1]
     webbrowser.open("http://127.0.0.1:5000")
-    app.run(debug=True)
+    # app.run(debug=True)
+    app.run()
