@@ -22,6 +22,7 @@
 
     <div class="button-group">
         <input type="text" id="repo_url" placeholder="Enter GitHub repo URL">
+        <input type="text" id="clone_dir" placeholder="Enter directory to clone into" value="cloned_repo">
         <button onclick="cloneRepo()">Clone Repo</button>
     </div>
 
@@ -88,17 +89,20 @@
 
         function cloneRepo() {
             const repo_url = document.getElementById('repo_url').value;
+            const clone_dir = document.getElementById('clone_dir').value;
+            
             fetch('/clone', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ repo_url })
+                body: JSON.stringify({ repo_url, clone_dir })
             }).then(response => response.json())
               .then(data => {
-                if (data.stderr) {
-                    console.error(data.stderr);
-                } else {
-                    console.log(data.stdout);
+                alert(data.stdout);
+                if (!data.stderr) {
+                    console.log("Calling browse agaion to refresh file list after clone...");
                     browse(); // Refresh file list after cloning
+                } else {
+                    console.log("Not calling browse because we do have something for data.stderr: ", data.stderr);
                 }
               })
         }

@@ -60,14 +60,25 @@ def generate():
 def clone_repo():
     repo_url = request.json.get("repo_url")
     clone_dir = request.json.get("clone_dir", "cloned_repo")
+
     if os.path.exists(clone_dir):
         return jsonify(
             {"stdout": "Repo already exists.", "stderr": "Repo already exists."}
         )
+
     result = subprocess.run(
         ["git", "clone", repo_url, clone_dir], capture_output=True, text=True
     )
-    return jsonify({"stdout": result.stdout, "stderr": result.stderr})
+
+    if result.returncode == 0:
+        stdout = f"Repository cloned successfully to {clone_dir}."
+        stderr = None
+    else:
+        print(f"{result.stdout=}, {result.stderr=}")
+        stdout = "Failed to clone repository."
+        stderr = result.stderr
+
+    return jsonify({"stdout": stdout, "stderr": stderr})
 
 
 def generate_snapshot(files=None):
