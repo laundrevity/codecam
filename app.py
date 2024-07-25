@@ -1,4 +1,5 @@
 from flask import Flask, render_template, request, jsonify
+from snapshot import generate_snapshot
 from datetime import datetime
 import os
 import sys
@@ -7,6 +8,7 @@ import shutil
 import platform
 import subprocess
 import webbrowser
+import argparse
 
 app = Flask(__name__)
 
@@ -85,28 +87,6 @@ def clone_repo():
     return jsonify({"stdout": stdout, "stderr": stderr})
 
 
-def generate_snapshot(files=None):
-    if files is None:
-        if os.path.exists(selected_files_path):
-            with open(selected_files_path, "r") as f:
-                files = json.load(f)
-        else:
-            return None
-
-    system_info = (
-        f"System: {platform.system()} {platform.release()} {platform.version()}"
-    )
-    result = f"{system_info}\nTime: {datetime.now()}\n"
-    for file in files:
-        if os.path.isdir(file):
-            continue
-        with open(file, "r") as f:
-            content = f.read()
-        result += f"--- {file} ---\n{content}\n\n"
-
-    return result
-
-
 def copy_to_clipboard(text):
     if platform.system() == "Darwin":
         subprocess.run("pbcopy", text=True, input=text)
@@ -122,18 +102,28 @@ def copy_to_clipboard(text):
 
 
 if __name__ == "__main__":
-    if len(sys.argv) > 1 and sys.argv[1] == "gen":
-        snapshot = generate_snapshot()
+    parser = argparse.ArgumentParser(description="CodeCam utility")
+    parser.add_argument("command", choices=["gen", "run"], help="Command to run")
+    parser.add_argument(
+        "--n",
+        type=int,
+        default=0,
+        help="Number of previous commands to append to output",
+    )
+
+    args = parser.parse_args()
+
+    if args.command == "gen":
+        snapshot = generate_snapshot(selected_files_path, history_length=args.n)
         if snapshot:
             copy_to_clipboard(snapshot)
+            print("Copied snapshot to clipboard")
         else:
-            print("No selected files found.")
-    else:
-
+            print("No selected files found!")
+    elif args.command == "run":
         if platform.system() == "Linux" and "Microsoft" in platform.uname().release:
             # WSL-specific command to open the browser
             os.system("powershell.exe Start-Process http://127.0.0.1:5000")
         else:
             webbrowser.open("http://127.0.0.1:5000")
-
         app.run()
