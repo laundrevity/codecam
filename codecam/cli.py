@@ -13,9 +13,13 @@ def main() -> None:
     parser = argparse.ArgumentParser(
         prog="codecam", description="Share code selections with an LLM"
     )
-    parser.add_argument("path", nargs="?", default=".", help="Project path (default: .)")
+    parser.add_argument(
+        "path", nargs="?", default=".", help="Project path (default: .)"
+    )
     parser.add_argument("--host", default="127.0.0.1")
-    parser.add_argument("--port", type=int, default=0, help="0 chooses a random free port")
+    parser.add_argument(
+        "--port", type=int, default=0, help="0 chooses a random free port"
+    )
     parser.add_argument("--no-browser", action="store_true")
     parser.add_argument("--version", action="store_true", help="Print version and exit")
     args = parser.parse_args()

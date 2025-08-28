@@ -103,7 +103,8 @@ def create_app(default_path: str = ".") -> Flask:
                 dirs[:] = [
                     d
                     for d in dirs
-                    if d not in ("venv", "__pycache__", ".git", ".mypy_cache", ".ruff_cache")
+                    if d
+                    not in ("venv", "__pycache__", ".git", ".mypy_cache", ".ruff_cache")
                 ]
                 for filename in filenames:
                     full = Path(root) / filename
