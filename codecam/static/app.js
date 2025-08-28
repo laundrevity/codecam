@@ -140,4 +140,3 @@ document.addEventListener('visibilitychange', () => {
 });
 
 window.onload = function () { browse(); };
-

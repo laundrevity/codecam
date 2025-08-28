@@ -6,10 +6,12 @@ name = "pypi"
 [packages]
 flask = "*"
 platformdirs = "*"
+build = "*"
+twine = "*"
+pre-commit = "*"
 
 [dev-packages]
 
 [requires]
 python_version = "3.9"
 python_full_version = "3.9.23"
-

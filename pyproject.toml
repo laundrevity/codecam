@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "codecam"
-version = "0.1.1"
+version = "0.1.2"
 description = "Select and snapshot project files for sharing with LLMs"
 readme = "README.md"
 requires-python = ">=3.9"
@@ -13,6 +13,19 @@ authors = [{ name = "Conor Mahany" }]
 dependencies = [
   "Flask>=3.0.0",
   "platformdirs>=4.2.0",
+]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Environment :: Console",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Framework :: Flask",
+  "Intended Audience :: Developers",
+  "Topic :: Utilities",
 ]
 
 [project.urls]
@@ -29,3 +42,15 @@ license-files = ["LICENSE"]
 [tool.setuptools.package-data]
 codecam = ["templates/*.html", "static/*.js"]
 
+[tool.ruff]
+line-length = 100
+target-version = "py39"
+extend-exclude = ["dist", "build", ".venv", "venv", ".git"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
+
+[tool.mypy]
+python_version = "3.9"
+strict = true
+ignore_missing_imports = true

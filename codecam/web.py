@@ -1,16 +1,15 @@
 from __future__ import annotations
 
-from typing import List, Optional
-from pathlib import Path
-import threading
 import hashlib
 import json
 import os
+import threading
 import time
+from pathlib import Path
 
 from flask import Flask, jsonify, render_template, request
+from flask.typing import ResponseReturnValue
 from platformdirs import user_cache_dir
-
 
 PKG_NAME = "codecam"
 
@@ -54,14 +53,14 @@ def create_app(default_path: str = ".") -> Flask:
     # ---- idle reaper state
     last_seen = {"ts": time.time()}
 
-    def _bump_idle():
+    def _bump_idle() -> None:
         last_seen["ts"] = time.time()
 
-    @app.before_request
-    def _before_request():
+    @app.before_request  # type: ignore[misc]
+    def _before_request() -> None:
         _bump_idle()
 
-    def _reaper():
+    def _reaper() -> None:
         # Daemon thread that kills the process when no requests for a while.
         while True:
             time.sleep(2)
@@ -71,10 +70,10 @@ def create_app(default_path: str = ".") -> Flask:
     threading.Thread(target=_reaper, daemon=True).start()
     # ----
 
-    @app.route("/")
-    def index():
+    @app.route("/")  # type: ignore[misc]
+    def index() -> ResponseReturnValue:
         selected_path = _cache_file_for(default_path)
-        selected_files: List[str]
+        selected_files: list[str]
         if selected_path.exists():
             try:
                 selected_files = json.loads(selected_path.read_text())
@@ -91,17 +90,21 @@ def create_app(default_path: str = ".") -> Flask:
             current_directory=current_directory,
         )
 
-    @app.route("/browse", methods=["POST"])
-    def browse():
+    @app.route("/browse", methods=["POST"])  # type: ignore[misc]
+    def browse() -> ResponseReturnValue:
         payload = request.get_json(silent=True) or {}
         path = payload.get("path", default_path) or "."
         root_path = Path(path).resolve()
 
-        files: List[str] = []
+        files: list[str] = []
         try:
             for root, dirs, filenames in os.walk(root_path):
                 # prune common noise
-                dirs[:] = [d for d in dirs if d not in ("venv", "__pycache__", ".git", ".mypy_cache", ".ruff_cache")]
+                dirs[:] = [
+                    d
+                    for d in dirs
+                    if d not in ("venv", "__pycache__", ".git", ".mypy_cache", ".ruff_cache")
+                ]
                 for filename in filenames:
                     full = Path(root) / filename
                     files.append(_normalize_for_web(str(full)))
@@ -111,8 +114,8 @@ def create_app(default_path: str = ".") -> Flask:
 
         return jsonify(files=files)
 
-    @app.route("/generate", methods=["POST"])
-    def generate():
+    @app.route("/generate", methods=["POST"])  # type: ignore[misc]
+    def generate() -> ResponseReturnValue:
         payload = request.get_json(silent=True) or {}
         files = payload.get("files", [])
         result = _generate_snapshot(files)
@@ -120,8 +123,8 @@ def create_app(default_path: str = ".") -> Flask:
         _cache_file_for(default_path).write_text(json.dumps(files))
         return jsonify(result=result)
 
-    @app.route("/shutdown", methods=["POST"])
-    def shutdown():
+    @app.route("/shutdown", methods=["POST"])  # type: ignore[misc]
+    def shutdown() -> ResponseReturnValue:
         # Graceful stop for werkzeug dev server; fallback to hard exit
         func = request.environ.get("werkzeug.server.shutdown")
         if func is None:
@@ -129,7 +132,7 @@ def create_app(default_path: str = ".") -> Flask:
         func()
         return "Server shutting down..."
 
-    def _generate_snapshot(files: Optional[List[str]]) -> Optional[str]:
+    def _generate_snapshot(files: list[str] | None) -> str | None:
         if files is None:
             # Not used in web path; parity with potential CLI usage
             sel = _cache_file_for(default_path)
@@ -144,7 +147,7 @@ def create_app(default_path: str = ".") -> Flask:
             f"System: {platform.system()} {platform.release()} {platform.version()}\n"
             f"Time: {datetime.now()}\n"
         )
-        chunks: List[str] = [header]
+        chunks: list[str] = [header]
 
         for f in files:
             p = _openable_local_path(f)
@@ -160,4 +163,3 @@ def create_app(default_path: str = ".") -> Flask:
         return "".join(chunks)
 
     return app
-
