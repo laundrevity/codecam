@@ -13,3 +13,5 @@ A tiny tool to select files from a project and produce a single text snapshot fo
 pipx install codecam
 codecam .
 ```
+
+![demo](docs/demo.gif)
