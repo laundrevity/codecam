@@ -9,6 +9,7 @@ platformdirs = "*"
 build = "*"
 twine = "*"
 pre-commit = "*"
+pytest = "*"
 
 [dev-packages]
 
