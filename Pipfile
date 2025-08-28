@@ -10,6 +10,7 @@ build = "*"
 twine = "*"
 pre-commit = "*"
 pytest = "*"
+pathspec = "*"
 
 [dev-packages]
 

@@ -4,18 +4,18 @@ import hashlib
 import json
 import os
 import threading
+import mimetypes
 import time
 from pathlib import Path
 
 from flask import Flask, jsonify, render_template, request
 from flask.typing import ResponseReturnValue
 from platformdirs import user_cache_dir
+from pathspec import PathSpec
+
 
 PKG_NAME = "codecam"
-
-
-# Idle timeout (seconds) before forcibly exiting if no requests arrive.
-# Override with env var CODECAM_IDLE (e.g., CODECAM_IDLE=300)
+MAX_MB = int(os.getenv("CODECAM_MAX_MB", "2"))
 IDLE_TIMEOUT_SECONDS = int(os.getenv("CODECAM_IDLE", "60"))
 
 
@@ -41,6 +41,20 @@ def _openable_local_path(path: str) -> Path:
     return Path(path)
 
 
+def _load_gitignore(root: Path) -> PathSpec | None:
+    gi = root / ".gitignore"
+    if not gi.exists():
+        return None
+    return PathSpec.from_lines("gitwildmatch", gi.read_text().splitlines())
+
+
+def _is_probably_text(p: Path) -> bool:
+    mt, _ = mimetypes.guess_type(p.name)
+    if mt is None:
+        return True
+    return mt.startswith("text/") or mt in {"application/json", "application/xml"}
+
+
 def create_app(default_path: str = ".") -> Flask:
     """
     Create the Flask app.
@@ -49,6 +63,8 @@ def create_app(default_path: str = ".") -> Flask:
     - Includes an idle reaper thread to exit when idle
     """
     app = Flask(__name__, template_folder="templates", static_folder="static")
+    project_root = Path(default_path).resolve()
+    gitignore = _load_gitignore(project_root)
 
     # ---- idle reaper state
     last_seen = {"ts": time.time()}
@@ -94,20 +110,38 @@ def create_app(default_path: str = ".") -> Flask:
     def browse() -> ResponseReturnValue:
         payload = request.get_json(silent=True) or {}
         path = payload.get("path", default_path) or "."
-        root_path = Path(path).resolve()
 
         files: list[str] = []
         try:
-            for root, dirs, filenames in os.walk(root_path):
-                # prune common noise
+            for root, dirs, filenames in os.walk(path):
+                # prune noise dirs
                 dirs[:] = [
                     d
                     for d in dirs
                     if d
-                    not in ("venv", "__pycache__", ".git", ".mypy_cache", ".ruff_cache")
+                    not in ("venv", "__pycache__", ".mypy_cache", ".ruff_cache", ".git")
                 ]
+
+                # apply .gitignore (directories)
+                if gitignore:
+                    # drop dirs ignored at this level
+                    dirs[:] = [
+                        d
+                        for d in dirs
+                        if not gitignore.match_file(
+                            str(Path(root, d).relative_to(project_root))
+                        )
+                    ]
+
                 for filename in filenames:
                     full = Path(root) / filename
+                    rel = None
+                    try:
+                        rel = full.relative_to(project_root)
+                    except ValueError:
+                        continue  # outside project root
+                    if gitignore and gitignore.match_file(str(rel)):
+                        continue
                     files.append(_normalize_for_web(str(full)))
         except Exception:
             # If path invalid or unreadable, return empty list
@@ -151,12 +185,23 @@ def create_app(default_path: str = ".") -> Flask:
         chunks: list[str] = [header]
 
         for f in files:
-            p = _openable_local_path(f)
+            p = _openable_local_path(f).resolve()
+            try:
+                p.relative_to(project_root)
+            except ValueError:
+                continue
+            if p.is_symlink():
+                continue
             if p.is_dir():
                 # skip directories; the UI selects files
                 continue
             try:
-                content = p.read_text(encoding="utf-8", errors="replace")
+                if p.stat().st_size > MAX_MB * 1024 * 1024:
+                    content = f"<<SKIPPED: {p.name} larger than {MAX_MB} MB>>"
+                elif not _is_probably_text(p):
+                    content = f"<<SKIPPED: {p.name} appears binary (not text/*)>>"
+                else:
+                    content = p.read_text(encoding="utf-8", errors="replace")
             except Exception as e:
                 content = f"<<ERROR READING FILE: {e}>>"
             chunks.append(f"--- {p} ---\n{content}\n")
