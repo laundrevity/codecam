@@ -177,7 +177,6 @@ def create_app(default_path: str = ".") -> Flask:
 
     def _generate_snapshot(files: list[str] | None) -> str | None:
         if files is None:
-            # Not used in web path; parity with potential CLI usage
             sel = _cache_file_for(default_path)
             if not sel.exists():
                 return None
@@ -192,16 +191,17 @@ def create_app(default_path: str = ".") -> Flask:
         )
         chunks: list[str] = [header]
 
+        project_root = Path(default_path).resolve()
+
         for f in files:
-            p = _openable_local_path(f).resolve()
+            p = Path(f)
+            if not p.is_absolute():  # resolve relative to project root
+                p = (project_root / p).resolve()
             try:
-                p.relative_to(project_root)
+                p.relative_to(project_root)  # confine to root
             except ValueError:
                 continue
-            if p.is_symlink():
-                continue
-            if p.is_dir():
-                # skip directories; the UI selects files
+            if p.is_symlink() or p.is_dir():
                 continue
             try:
                 if p.stat().st_size > MAX_MB * 1024 * 1024:
@@ -212,7 +212,10 @@ def create_app(default_path: str = ".") -> Flask:
                     content = p.read_text(encoding="utf-8", errors="replace")
             except Exception as e:
                 content = f"<<ERROR READING FILE: {e}>>"
-            chunks.append(f"--- {p} ---\n{content}\n")
+
+            # Use a relative header for neat output
+            rel = p.relative_to(project_root).as_posix()
+            chunks.append(f"--- {rel} ---\n{content}\n")
 
         return "".join(chunks)
 
