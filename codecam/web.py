@@ -109,11 +109,15 @@ def create_app(default_path: str = ".") -> Flask:
     @app.route("/browse", methods=["POST"])  # type: ignore[misc]
     def browse() -> ResponseReturnValue:
         payload = request.get_json(silent=True) or {}
-        path = payload.get("path", default_path) or "."
+        # normalize: blank -> project root
+        project_root = Path(default_path).resolve()
+        root_path = Path(payload.get("path") or project_root).resolve()
 
         files: list[str] = []
         try:
-            for root, dirs, filenames in os.walk(path):
+            for root, dirs, filenames in os.walk(str(root_path)):
+                root_abs = Path(root).resolve()
+
                 # prune noise dirs
                 dirs[:] = [
                     d
@@ -122,29 +126,33 @@ def create_app(default_path: str = ".") -> Flask:
                     not in ("venv", "__pycache__", ".mypy_cache", ".ruff_cache", ".git")
                 ]
 
-                # apply .gitignore (directories)
+                # apply .gitignore to dirs (relative to project_root)
                 if gitignore:
-                    # drop dirs ignored at this level
-                    dirs[:] = [
-                        d
-                        for d in dirs
-                        if not gitignore.match_file(
-                            str(Path(root, d).relative_to(project_root))
-                        )
-                    ]
+                    kept = []
+                    for d in dirs:
+                        p = (root_abs / d).resolve()
+                        try:
+                            rel = p.relative_to(project_root)
+                        except ValueError:
+                            # outside project root -> drop
+                            continue
+                        if not gitignore.match_file(rel.as_posix()):
+                            kept.append(d)
+                    dirs[:] = kept
 
+                # files
                 for filename in filenames:
-                    full = Path(root) / filename
-                    rel = None
+                    p = (root_abs / filename).resolve()
                     try:
-                        rel = full.relative_to(project_root)
+                        rel = p.relative_to(project_root)
                     except ValueError:
-                        continue  # outside project root
-                    if gitignore and gitignore.match_file(str(rel)):
+                        # outside project root
                         continue
-                    files.append(_normalize_for_web(str(full)))
-        except Exception:
-            # If path invalid or unreadable, return empty list
+                    if gitignore and gitignore.match_file(rel.as_posix()):
+                        continue
+                    files.append(rel.as_posix())
+        except Exception as e:
+            print("browser error:", e)
             files = []
 
         return jsonify(files=files)
