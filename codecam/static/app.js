@@ -45,6 +45,7 @@ function buildFileTree(files) {
     const checkbox = document.createElement('input');
     checkbox.type = 'checkbox';
     checkbox.value = node.isFile ? node.fullPath : path;
+    checkbox.dataset.kind = node.isFile ? 'file' : 'dir';
     checkbox.checked = node.isFile && selectedFiles.includes(node.fullPath);
 
     // toggle all descendants if a directory checkbox is toggled
@@ -78,16 +79,22 @@ function buildFileTree(files) {
     return li;
   }
 
-  const roots = Object.keys(fileMap);
-  for (const key of roots) {
-    fileTree.appendChild(createTreeElement(fileMap[key], key));
-  }
+  // synthetic root representing the current directory
+  const rootNode = { children: fileMap, isFile: false };
+  fileTree.appendChild(createTreeElement(rootNode, '.'));
   return fileTree;
 }
 
 function checkAllInDirectory(directory, check) {
   const boxes = document.querySelectorAll('#files input[type="checkbox"]');
-  const dir = directory.replace(/^\.\//, '');
+  let dir = directory.replace(/^\.\//, '');
+
+  // root: toggle everything
+  if (dir === '.' || dir === '') {
+    boxes.forEach(cb => { cb.checked = check; });
+    return;
+  }
+
   boxes.forEach(cb => {
     const v = cb.value.replace(/^\.\//, '');
     if (v.startsWith(dir + '/') || v === dir) {
@@ -109,7 +116,7 @@ function uncheckAll() {
 function generate() {
   const checkboxes = document.querySelectorAll('#files input[type="checkbox"]');
   const files = Array.from(checkboxes)
-    .filter(cb => cb.checked && cb.value.includes('/'))
+    .filter(cb => cb.checked && cb.dataset.kind === 'file')
     .map(cb => cb.value);
 
   fetch('/generate', {
