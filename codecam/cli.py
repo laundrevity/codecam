@@ -5,8 +5,8 @@ import textwrap
 import os
 import platform
 import webbrowser
+from importlib.metadata import PackageNotFoundError, version as pkg_version
 
-from . import __version__
 from .web import create_app
 
 
@@ -36,7 +36,12 @@ def main() -> None:
     args = parser.parse_args()
 
     if args.version:
-        print(__version__)
+        try:
+            print(pkg_version("codecam"))
+        except PackageNotFoundError:
+            # likely running from a checkout without an installed distribution
+            # e.g. `python -m codecam.cli` without `pip install -e .`
+            print("unknown")
         return
 
     app = create_app(args.path, auto_shutdown=not args.no_auto_shutdown)
