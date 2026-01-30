@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import textwrap
 import os
 import platform
 import webbrowser
@@ -20,6 +21,16 @@ def main() -> None:
     parser.add_argument(
         "--port", type=int, default=0, help="0 chooses a random free port"
     )
+    parser.add_argument(
+        "--no-auto-shutdown",
+        action="store_true",
+        help=textwrap.dedent(
+            """\
+            Disable shutting down when the browser tab closes or the apii goes idle.
+            Useful for remote-port forwarding / SSH tunnels where pagehide events can be unreliable.
+            """
+        ).strip(),
+    )
     parser.add_argument("--no-browser", action="store_true")
     parser.add_argument("--version", action="store_true", help="Print version and exit")
     args = parser.parse_args()
@@ -28,7 +39,7 @@ def main() -> None:
         print(__version__)
         return
 
-    app = create_app(args.path)
+    app = create_app(args.path, auto_shutdown=not args.no_auto_shutdown)
 
     # pick free port if 0
     import socket

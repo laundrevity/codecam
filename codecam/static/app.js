@@ -132,6 +132,7 @@ function generate() {
 
 // shut down the server on tab close/navigation
 function shutdownServer() {
+  if (typeof autoShutdown !== 'undefined' && !autoShutdown) return;
   try {
     fetch('/shutdown', { method: 'POST', keepalive: true, mode: 'no-cors' });
   } catch (e) { /* ignore */ }

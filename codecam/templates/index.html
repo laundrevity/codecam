@@ -59,6 +59,7 @@
     // Values injected from Flask context:
     const currentDirectory = "{{ current_directory }}";
     let selectedFiles = {{ selected_files | tojson | safe }};
+    const autoShutdown = {{ auto_shutdown | tojson | safe }};
   </script>
   <script src="{{ url_for('static', filename='app.js') }}"></script>
 </body>

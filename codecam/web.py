@@ -55,7 +55,7 @@ def _is_probably_text(p: Path) -> bool:
     return mt.startswith("text/") or mt in {"application/json", "application/xml"}
 
 
-def create_app(default_path: str = ".") -> Flask:
+def create_app(default_path: str = ".", auto_shutdown: bool = True) -> Flask:
     """
     Create the Flask app.
     - Caches selection per working directory
@@ -67,21 +67,22 @@ def create_app(default_path: str = ".") -> Flask:
     gitignore = _load_gitignore(project_root)
 
     # ---- idle reaper state
-    last_seen = {"ts": time.time()}
+    if auto_shutdown:
+        last_seen = {"ts": time.time()}
 
-    def _bump_idle() -> None:
-        last_seen["ts"] = time.time()
+        def _bump_idle() -> None:
+            last_seen["ts"] = time.time()
 
-    @app.before_request  # type: ignore[misc]
-    def _before_request() -> None:
-        _bump_idle()
+        @app.before_request  # type: ignore[misc]
+        def _before_request() -> None:
+            _bump_idle()
 
-    def _reaper() -> None:
-        # Daemon thread that kills the process when no requests for a while.
-        while True:
-            time.sleep(2)
-            if time.time() - last_seen["ts"] > IDLE_TIMEOUT_SECONDS:
-                os._exit(0)
+        def _reaper() -> None:
+            # Daemon thread that kills the process when no requests for a while.
+            while True:
+                time.sleep(2)
+                if time.time() - last_seen["ts"] > IDLE_TIMEOUT_SECONDS:
+                    os._exit(0)
 
     threading.Thread(target=_reaper, daemon=True).start()
     # ----
@@ -102,6 +103,7 @@ def create_app(default_path: str = ".") -> Flask:
         return render_template(
             "index.html",
             default_path=default_path,
+            auto_shutdown=auto_shutdown,
             selected_files=selected_files,
             current_directory=current_directory,
         )
@@ -166,14 +168,16 @@ def create_app(default_path: str = ".") -> Flask:
         _cache_file_for(default_path).write_text(json.dumps(files))
         return jsonify(result=result)
 
-    @app.route("/shutdown", methods=["POST"])  # type: ignore[misc]
-    def shutdown() -> ResponseReturnValue:
-        # Graceful stop for werkzeug dev server; fallback to hard exit
-        func = request.environ.get("werkzeug.server.shutdown")
-        if func is None:
-            os._exit(0)
-        func()
-        return "Server shutting down..."
+    if auto_shutdown:
+
+        @app.route("/shutdown", methods=["POST"])  # type: ignore[misc]
+        def shutdown() -> ResponseReturnValue:
+            # Graceful stop for werkzeug dev server; fallback to hard exit
+            func = request.environ.get("werkzeug.server.shutdown")
+            if func is None:
+                os._exit(0)
+            func()
+            return "Server shutting down..."
 
     def _generate_snapshot(files: list[str] | None) -> str | None:
         if files is None:
