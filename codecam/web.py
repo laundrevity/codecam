@@ -96,14 +96,13 @@ def create_app(default_path: str = ".", auto_shutdown: bool = True) -> Flask:
             try:
                 selected_files = json.loads(selected_path.read_text())
             except Exception:
-                selected_files = [
-                    f for f in selected_files if not f.startswith(EXCLUDED_PREFIXES)
-                ]
+                selected_files = []
         else:
-            selected_files = [
-                f for f in selected_files if not f.startswith(EXCLUDED_PREFIXES)
-            ]
+            selected_files = []
 
+        selected_files = [
+            f for f in selected_files if not f.startswith(EXCLUDED_PREFIXES)
+        ]
         current_directory = str(Path(default_path).resolve())
         return render_template(
             "index.html",
