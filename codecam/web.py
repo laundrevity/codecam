@@ -84,7 +84,7 @@ def create_app(default_path: str = ".", auto_shutdown: bool = True) -> Flask:
                 if time.time() - last_seen["ts"] > IDLE_TIMEOUT_SECONDS:
                     os._exit(0)
 
-    threading.Thread(target=_reaper, daemon=True).start()
+        threading.Thread(target=_reaper, daemon=True).start()
     # ----
 
     @app.route("/")  # type: ignore[misc]
