@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "codecam"
-version = "0.2.4"
+version = "0.2.5"
 description = "Select and snapshot project files for sharing with LLMs"
 readme = "README.md"
 requires-python = ">=3.8"
