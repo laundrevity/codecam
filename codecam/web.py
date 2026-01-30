@@ -91,13 +91,18 @@ def create_app(default_path: str = ".", auto_shutdown: bool = True) -> Flask:
     def index() -> ResponseReturnValue:
         selected_path = _cache_file_for(default_path)
         selected_files: list[str]
+        EXCLUDED_PREFIXES = (".venv/", "venv/", ".pytest_cache/", "__pycache__/")
         if selected_path.exists():
             try:
                 selected_files = json.loads(selected_path.read_text())
             except Exception:
-                selected_files = []
+                selected_files = [
+                    f for f in selected_files if not f.startswith(EXCLUDED_PREFIXES)
+                ]
         else:
-            selected_files = []
+            selected_files = [
+                f for f in selected_files if not f.startswith(EXCLUDED_PREFIXES)
+            ]
 
         current_directory = str(Path(default_path).resolve())
         return render_template(
@@ -115,6 +120,10 @@ def create_app(default_path: str = ".", auto_shutdown: bool = True) -> Flask:
         project_root = Path(default_path).resolve()
         root_path = Path(payload.get("path") or project_root).resolve()
 
+        print(f"{project_root=}")
+        print(f"{root_path=}")
+        print(f"{gitignore is None=}")
+
         files: list[str] = []
         try:
             for root, dirs, filenames in os.walk(str(root_path)):
@@ -126,10 +135,11 @@ def create_app(default_path: str = ".", auto_shutdown: bool = True) -> Flask:
                     for d in dirs
                     if d
                     not in (
-                        "venv",
+                        ".venv",
                         "__pycache__",
                         ".mypy_cache",
                         ".ruff_cache",
+                        ".pytest_cache",
                         ".git",
                         "dist",
                         "build",
