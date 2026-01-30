@@ -125,7 +125,15 @@ def create_app(default_path: str = ".", auto_shutdown: bool = True) -> Flask:
                     d
                     for d in dirs
                     if d
-                    not in ("venv", "__pycache__", ".mypy_cache", ".ruff_cache", ".git")
+                    not in (
+                        "venv",
+                        "__pycache__",
+                        ".mypy_cache",
+                        ".ruff_cache",
+                        ".git",
+                        "dist",
+                        "build",
+                    )
                 ]
 
                 # apply .gitignore to dirs (relative to project_root)
@@ -138,7 +146,9 @@ def create_app(default_path: str = ".", auto_shutdown: bool = True) -> Flask:
                         except ValueError:
                             # outside project root -> drop
                             continue
-                        if not gitignore.match_file(rel.as_posix()):
+                        # gitignore patterns like ".venv/" are directory-specific
+                        rel_dir = rel.as_posix().rstrip("/") + "/"
+                        if not gitignore.match_file(rel_dir):
                             kept.append(d)
                     dirs[:] = kept
 
